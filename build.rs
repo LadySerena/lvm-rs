@@ -3,20 +3,33 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    let conf = pkg_config::Config::new();
-    let blockdev = conf.probe("blockdev").unwrap();
+    let blockdev = pkg_config::Config::new()
+        .probe("blockdev")
+        .expect("libblockdev not found");
+    let includes: Vec<String> = blockdev
+        .include_paths
+        .iter()
+        .map(|path| format!("{}", path.to_string_lossy()))
+        .collect();
+    let libs: Vec<String> = blockdev
+        .libs
+        .iter()
+        .map(|lib| format!("{}", lib.as_str()))
+        .collect();
+    // for include in includes.iter() {
+    //     println!("cargo:rustc-link-search={}", include);
+    // }
+    // for lib in libs.iter() {
+    //     println!("cargo:rustc-link-lib={}", lib);
+    // }
+    // readd link search bits so rustc knows how to link and not just bindgen
     println!("cargo:rustc-link-lib=bd_lvm");
     println!("cargo:rerun-if-changed=wrapper.h");
 
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
-        .parse_callbacks(Box::new(bindgen::CargoCallbacks))
-        .clang_args(
-            blockdev
-                .include_paths
-                .iter()
-                .map(|path| format!("-I{}", path.to_string_lossy())),
-        )
+        .clang_args(includes.iter().map(|path| format!("-I{}", path)))
+        .clang_arg("-lbd_lvm")
         .generate()
         .expect("unable to generate bindings");
 
@@ -24,4 +37,5 @@ fn main() {
     bindings
         .write_to_file(out_path.join("bindings.rs"))
         .expect("couldn't write bindings");
+    // panic!("debug");
 }
