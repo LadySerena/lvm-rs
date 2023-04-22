@@ -10,3 +10,4 @@ build="build.rs"
 
 [build-dependencies]
 bindgen = "0.61.0"
+pkg-config = "0.3.26"
